@@ -7,41 +7,50 @@ Created on Wed Jan 31 15:05:29 2024
 import matplotlib.pyplot as plt
 import numpy as np 
 
-Names =['Alpha Centauri A', '20 Tauri','WR 22']
-Temps = np.array([5260, 12300, 44700])
+Names =['$\\alpha$ Centauri A', '$\\sigma$ Orionis E','$\\theta^1$ Orionis C1']
+temps = np.array([5260, 25000, 39000])
+M_sun = [5.61,5.44,4.81]
+F_sun = [94.323,333.548,445.642]
+d = [1.35,352,460]
 h = 6.626e-34
 c = 299792458
 Kb = 1.3806e-23
-Spectra = np.array([[0.3e-6, 0.4e-6], [0.35e-6, 0.55e-6], [0.45e-6, 0.7e-6]])
-Spectral_Magnitudes = np.zeros((len(Temps), len(Spectra)))
+spectra = np.array([[0.3e-6, 0.4e-6], [0.35e-6, 0.55e-6], [0.45e-6, 0.7e-6]])
+λ = np.linspace(spectra[0,0],spectra[2,1],1000)
+Spectral_Magnitudes = np.zeros((len(temps), len(spectra)))
+Luminosities = np.zeros(len(temps))
 colors = ['darkviolet','deepskyblue','slategrey']
 index = ['U','B','V']
 
 def planck(T, λ):
-    return (8*np.pi*h*c*(λ**(-5)))*(1/(np.exp((h * c) / (λ * Kb * T)) - 1))
+    return (2*h*(λ**(-5))*c)*(1/(np.exp((h * c) / (λ*Kb * T)) - 1))
+
+def flux_density(T,λ,filter_):
+    return np.pi*np.trapz(planck(T, λ),filter_)
 
 fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(24, 14))
+x = np.linspace(0,1e-6,1000)
 
-for i in range(len(Temps)):
-    for j in range(len(Spectra)):
-        x_total = np.linspace(0,1e-6,1000)
-        x_values = np.linspace(Spectra[j, 0], Spectra[j, 1], 1000)
-        Specific_Intensities = planck(Temps[i], x_values)
-        Spectral_Intensities = np.trapz(Specific_Intensities, x_values)
-        Spectral_Magnitudes[i, j] = -2.5*np.log10(Spectral_Intensities)
-        label = [f'$m_{index[j]}$ = {Spectral_Magnitudes[i, j]:.2f}']
-        axs[i].fill_between(x_total, 0, planck(Temps[i], x_total), where=(x_total >= Spectra[j, 0]) & (x_total <= Spectra[j, 1]), color=colors[j], alpha=0.4, label=label)
+for i in range(len(temps)):
+    for j in range(len(spectra)):
+        F = flux_density(temps[i],λ,spectra[j])
+        M = -2.5*np.log10(F/F_sun[j])
+        m = 5*np.log10(d[i])-5+M
+        Spectral_Magnitudes[i,j] = m
+        label = [f'${index[j]}$ = {Spectral_Magnitudes[i, j]:.2f}']
+        axs[i].fill_between(x, 0, planck(temps[i], x), where=(x >= spectra[j, 0]) & (x <= spectra[j, 1]), color=colors[j], alpha=0.4, label=label)
      
     axs[i].set_title(Names[i],fontsize=24)
     axs[i].grid(True)
-    axs[i].plot(x_total, planck(Temps[i], x_total),c='k',label=f'T = {Temps[i]}K')
+    axs[i].plot(x, planck(temps[i], x),c='k',label=f'T = {temps[i]}K')
     axs[i].legend(fontsize=22,loc='upper right')
-axs[0].set_ylabel('$B(\\lambda,T) [erg \cdot s^{-1} \cdot sr^{-1} \cdot cm^{-2}  \cdot Hz^{-1}]$',fontsize = 22)
-axs[1].set_xlabel('$\\lambda [m]$',fontsize = 22)
-fig.suptitle('Magnitudes Específicas Según la Intensidad de la Estrella', fontsize=32)
+axs[0].set_ylabel('$B(\\lambda,T) [Wm^{-3}]$',fontsize = 26)
+axs[1].set_xlabel('$\\lambda [m]$',fontsize = 26)
+fig.suptitle('Magnitudes aparentes en la Tierra filtradas en UBV', fontsize=36)
 
-U_B_mag = Spectral_Magnitudes[:,0]-Spectral_Magnitudes[:,1]
-B_V_mag = Spectral_Magnitudes[:,1]-Spectral_Magnitudes[:,2]
+Spectral_Theorical_Magnitudes = np.array([[0.96,0.72,0.01],[5.66,6.38,6.46],[4.20,5.15,5.13]])
 
-U_B_real = np.array([0.24,-0.4,-0.82])
-B_V_real = np.array([0.71,-0.07,0.08])
+UB_exp = Spectral_Magnitudes[:,1] - Spectral_Magnitudes[:,0]
+BV_exp = Spectral_Magnitudes[:,2] - Spectral_Magnitudes[:,1]
+UB = Spectral_Theorical_Magnitudes[:,1] - Spectral_Theorical_Magnitudes[:,0]
+BV = Spectral_Theorical_Magnitudes[:,2] - Spectral_Theorical_Magnitudes[:,1]
